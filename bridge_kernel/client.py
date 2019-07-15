@@ -416,11 +416,9 @@ class SocketClient():
                 self.stderr(self._tostr(message["code"]))
             elif message["type"] == MessageType.display.value:
                 if self.display is not None:
-                    if "data64" in message:
-                        message["data"] = base64.decodebytes(message["data64"].encode("ascii"))
                     self.display(message)
                 else:
-                    self.stdout(message["str"])
+                    self.stdout("[display] - no graphics display available")
             elif message["type"] == MessageType.idle.value:
                 return obj
 

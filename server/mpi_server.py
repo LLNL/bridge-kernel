@@ -124,13 +124,15 @@ class MPIServer():
                     print("removing {}".format(f))
                     os.remove(f)
 
-    def _write_bytes_image(self, data, format, as_str="image"):
+    def _write_bytes_image(self, data, fmt):
         if self.rank == 0:
             self.writemsg({
                 "type": "display",
-                "data64": encodebytes(data).decode("utf-8"),
-                "format": format,
-                "str": as_str
+                "module": "IPython.display",
+                "attr": "Image",
+                "args": {"data": encodebytes(data).decode("utf-8"), "format": fmt},
+                # request that the "data" key in "args" be decoded
+                "decode_bytes": ["data"]
             })
 
     def _setup_matplotlib(self):

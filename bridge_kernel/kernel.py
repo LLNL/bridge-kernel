@@ -8,6 +8,8 @@ from __future__ import print_function, unicode_literals, absolute_import
 from IPython.display import display as ipydisplay, Image
 from ipykernel.ipkernel import IPythonKernel
 from ipywidgets import widgets
+import importlib
+import base64
 
 from .client import SocketClient, get_backend_list
 
@@ -37,16 +39,34 @@ class BridgeKernel(IPythonKernel):
     def stderr(self, *args, **kwargs):
         self.out("stderr", *args, **kwargs)
 
-    def display(self, obj):
-        if isinstance(obj, dict):
-            if obj["type"] != "display":
-                self.stderr("cannot display message of type {}".format(obj["type"]))
-            elif obj["format"] in ["png"]:
-                ipydisplay(Image(data=obj["data"], format=obj["format"]))
-            else:
-                self.stderr("display error: unknown format %s" % obj["format"])
+    def display(self, msg):
+        cond = ("module" in msg and
+                "attr" in msg and
+                "args" in msg)
+
+        if cond:
+            try:
+                # ModuleNotFoundError
+                mod = importlib.import_module(msg["module"])
+                args = msg["args"]
+                if "decode_bytes" in msg:
+                    for key in msg["decode_bytes"]:
+                        args[key] = base64.decodebytes(args[key].encode("ascii"))
+
+                # AttributeError
+                cb = getattr(mod, msg["attr"])
+                if isinstance(args, list):
+                    obj = cb(*args)
+                elif isinstance(args, dict):
+                    obj = cb(**args)
+                else:
+                    self.stderr("display warning: 'args' is not list or dict")
+                    return
+                ipydisplay(obj)
+            except Exception as e:
+                self.stderr("display error: %s" % e)
         else:
-            self.stderr("cannot display object of type {}".format(type(obj)))
+            self.stderr("display error: message must contain 'module', 'attr', and 'args'")
 
     def disconnect(self):
         if self.client is not None:
