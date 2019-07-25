@@ -10,7 +10,7 @@ import shutil
 
 from ipykernel.kernelspec import write_kernel_spec, make_ipkernel_cmd
 
-install_requires = ["enum34", "jupyter_core", "ipywidgets", "ipykernel", "IPython", "numpy"]
+install_requires = ["enum34", "jupyter_core", "ipywidgets", "ipykernel", "IPython", "numpy", "matplotlib"]
 
 distname = "bridge_kernel"
 kernelname = "bridge"

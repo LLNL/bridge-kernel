@@ -182,7 +182,7 @@ class MPIServer():
                 if chunk is None:
                     return
                 chunks.append(chunk)
-                bytes_read += to_read
+                bytes_read += len(chunk)
             message = b"".join(chunks)
         else:
             message = None
