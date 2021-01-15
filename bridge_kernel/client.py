@@ -419,6 +419,7 @@ class SocketClient():
                     self.display(message)
                 else:
                     self.stdout("[display] - no graphics display available")
+                    self.stdout(self._tostr(message["str"]))
             elif message["type"] == MessageType.idle.value:
                 return obj
 

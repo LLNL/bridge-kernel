@@ -5,7 +5,7 @@
 
 from __future__ import print_function, unicode_literals, absolute_import
 
-from IPython.display import display as ipydisplay, Image
+from IPython.display import display as ipydisplay
 from ipykernel.ipkernel import IPythonKernel
 from ipywidgets import widgets
 import importlib
@@ -30,7 +30,7 @@ class BridgeKernel(IPythonKernel):
         }
 
     def out(self, name, message, silent=False):
-        if silent: return
+        if silent: return # noqa
         self.send_response(self.iopub_socket, "stream", dict(name=name, text=message))
 
     def stdout(self, *args, **kwargs):
@@ -40,10 +40,7 @@ class BridgeKernel(IPythonKernel):
         self.out("stderr", *args, **kwargs)
 
     def display(self, msg):
-        cond = ("module" in msg and
-                "attr" in msg and
-                "args" in msg)
-
+        cond = ("module" in msg and "attr" in msg and "args" in msg)
         if cond:
             try:
                 # ModuleNotFoundError

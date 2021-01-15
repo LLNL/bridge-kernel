@@ -19,6 +19,7 @@ rank = comm.Get_rank()
 greeting = "hi there"
 foo = 4
 
+
 # demonstriate streaming output
 def bar(n=10):
     for i in range(n):
@@ -32,12 +33,16 @@ def ranksum():
 
 # demo image
 def show_png_url(url="https://www.llnl.gov/sites/all/themes/llnl_bootstrap/logo.png"):
-    image(urlopen(url).read(), "png")
+    image(urlopen(url).read(), "png") # noqa
 
 
 # demo mpi_print
 def hello_from_all():
-    mpi_print("hello from %d" % rank)
+    mpi_print("hello from %d" % rank) # noqa
 
 
-MPIServer(comm=comm, ns=globals()).serve()
+server = MPIServer(comm=comm, ns=globals())
+server.serve()
+if server.wait_for_client():
+    server.loop()
+server.stop()

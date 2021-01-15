@@ -109,11 +109,13 @@ def try_ssh(log, server, port, env, check_hosts=False, timeout=5):
     if index == 0:
         if len(p.before) == 0:
             return True
+        elif p.before.startswith(b"Warning: Permanently added"):
+            return True
         else:
             raise TunnelError(p.before)
     elif index == 1:
         # try mrsh
-        #raise TunnelError("Connection refused")
+        # raise TunnelError("Connection refused")
         return False
     elif index == 2:
         raise TunnelError("Host authenticity can't be established")
@@ -139,7 +141,7 @@ def try_mrsh(log, server, port, env, check_hosts=False, timeout=5):
         raise TunnelError("Premission Refused")
     elif index == 2:
         raise TunnelError("Unable to connect to localhost after mrsh to %s" % server)
-    #elif index == 3:
+    # elif index == 3:
     #    raise TunnelError("Authenication failed")
     elif index == 3:
         raise TunnelError("Timeout connecting back to localhost after mrsh to %s" % server)

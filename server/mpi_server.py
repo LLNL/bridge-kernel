@@ -23,6 +23,11 @@ try:
 except ImportError:
     from base64 import encodestring as encodebytes
 
+try:
+    from ipywidgets import Widget
+except ImportError:
+    class Widget: pass # noqa
+
 
 class MPIServer():
     config_dir = os.path.join(os.environ["HOME"], ".config", "bridge_kernel")
@@ -60,6 +65,7 @@ class MPIServer():
         self.start_time = time.strftime("%Y-%m-%d %H:%M:%S")
         self.log = sys.__stdout__.write
         self.go = True
+        self._client_sock = None
 
         if self.rank == 0:
             self.client_stdout = self.ClientFile(self, "stdout")
@@ -153,7 +159,7 @@ class MPIServer():
             # plot commands. This is probably what we want but I'm not
             # quite sure how to hook it up, the approach below
             # writes blank images
-            #pyplot.draw_if_interactive = write_image
+            # pyplot.draw_if_interactive = write_image
         else:
             pyplot.show = lambda *args, **kwargs: None
             pyplot.show_if_interactive = pyplot.show
@@ -222,26 +228,37 @@ class MPIServer():
 
     def evaluate(self, code):
         with self._redirect():
+            res = None
+            res_str = None
             if self.rank == 0:
                 self.log("python> {}\n".format(code))
             try:
-                resp = eval(code, self.ns)
-                if resp is not None:
-                    resp = str(resp)
-            except Exception as e:
+                res = eval(code, self.ns)
+                if res is not None:
+                    res_str = str(res)
+            except Exception:
                 try:
                     exec(code, self.ns)
-                    resp = None
+                    res_str = None
                 except Exception as e:
-                    resp = str(e)
+                    res_str = str(e)
 
-            if self.rank == 0 and resp is not None and len(resp) > 0:
+            if self.rank == 0 and res_str is not None and len(res_str) > 0:
                 try:
-                    resp = resp + "\n"
-                    self.log("{}".format(resp))
+                    res_str = res_str + "\n"
+                    self.log("{}".format(res_str))
                 except UnicodeDecodeError:
                     self.log("<cannot display, non-ascii>\n")
-                self.writemsg({"type": "stdout", "code": resp})
+                if isinstance(res, Widget):
+                    self.writemsg({
+                        "type": "display",
+                        "str": res_str,
+                        "module": res.__module__,
+                        "attr": res.__class__.__name__,
+                        "args": res.serialize() if "serialize" in dir(res) else res.__dict__
+                    })
+                else:
+                    self.writemsg({"type": "stdout", "code": res_str})
 
     def complete(self, text, cursor_pos=None):
         if self.rank == 0:
@@ -320,14 +337,29 @@ class MPIServer():
 
             self.config = config
             self._sock = sock
-
-            print("bind successful. waiting for client...")
-            self._client_sock, addr = sock.accept()
-            print("got client - {}".format(addr))
-
-            self.writemsg({"type": "idle"})
         self.comm.Barrier()
 
+    def wait_for_client(self, timeout=None):
+        got_client = False
+        if self.rank == 0:
+            if timeout is None or timeout > 0:
+                print("waiting for client... ", end="")
+                sys.stdout.flush()
+            self._sock.settimeout(timeout)
+            try:
+                self._client_sock, addr = self._sock.accept()
+                print("got client - {}".format(addr))
+                got_client = True
+                self.writemsg({"type": "idle"})
+            except socket.timeout:
+                print("timeout")
+            except BlockingIOError:
+                pass
+        self.comm.bcast(got_client, root=0)
+        return got_client
+
+    def loop(self):
+        self._sock.settimeout(None)
         while self.go:
             if self.rank == 0:
                 data = self.readmsg()
@@ -349,5 +381,7 @@ class MPIServer():
             if self.rank == 0:
                 self.writemsg({"type": "idle"})
 
+    def stop(self):
         if self.rank == 0:
             self._remove_files()
+            self._sock = None
