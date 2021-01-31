@@ -5,7 +5,7 @@ protocol. The bk protocol is a small client-server protocol that emphasizes
 
 * Minimal dependencies
 * Easier embedding with MPI
-* Secure connections + authenication
+* Secure connections + authentication
 * Automatic tunneling
 
 An example MPI Python implementation is available under *server*.
